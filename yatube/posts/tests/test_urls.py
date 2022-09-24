@@ -99,7 +99,7 @@ class PostURLTests(TestCase):
     def test_post_edit_url_redirect_not_author_on_post_view(self):
         """Страница редактирования поста (posts/<post_id>/edit/)
         перенаправит не автора поста на страницу просмотра поста."""
-        response = self.authorized_client2.get(self.post_edit_page, follow=True)
+        response = self.authorized_client2.get(self.post_edit_page)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
         self.assertRedirects(response, self.post_detail_page)
 

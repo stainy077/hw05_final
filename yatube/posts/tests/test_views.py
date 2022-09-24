@@ -1,6 +1,6 @@
 import shutil
-import time
 import tempfile
+import time
 
 from django import forms
 from django.conf import settings
@@ -10,9 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-# from posts.forms import CommentForm
-from posts.models import Comment, Follow, Group, Post
-from posts.views import add_comment
+from posts.models import Follow, Group, Post
 from yatube.settings import POSTS_COUNT, POSTS_TEST_COUNT
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -134,50 +132,14 @@ class PostPagesTest(TestCase):
         test_profile_field = response.context.get('page_obj')[0]
         self.assertEqual(test_profile_field, self.test_post)
 
-    def test_post_detail_show_correct_context(self):  # #######################################
+    def test_post_detail_show_correct_context(self):
         """View-функция страницы поста передает правильный контекст."""
-        comment = Comment.objects.create(
-            post=self.test_post,
-            author=self.authorized_client2,
-            text='Тестовый комментарий',
-        )
         response = self.authorized_client2.get(reverse(
             'posts:post_detail',
             kwargs={'post_id': self.test_post.id},
         ))
-        # test_comment = add_comment(, self.test_post.id)
         post_detail_field = response.context.get('post')
         self.assertEqual(post_detail_field, self.test_post)
-
-        self.assertIn('comments', response.context)
-        # print(f'!!!!{'comments'}!!!!')
-        # print(f'!!!!{response.context}!!!!')
-        self.assertIn(comment.text, response.context['comments'].text)
-        print(f'!!!!{comment.text}!!!!')
-        # print(f'!!!!{response.context['comments']}!!!!')
-
-        # post_detail_comments = response.context.get('comments')
-        # self.assertEqual(test_comment, self.test_post.comments)
-
-
-        # comment = Comment.objects.create(
-        #     post=PostViewTests.post,
-        #     author=PostViewTests.user_author,
-        #     text='some comment'
-        # )
-        # response = self.namespaces_checking('posts:post_detail')
-        # self.assertIn('post', response.context)
-        # post = response.context.get('post')
-        # 
-        # self.assertIn('comments', response.context)
-        # self.assertIn(
-        #     comment,
-        #     response.context['comments']
-        # )
-
-
-
-
 
     def test_post_edit_page_show_correct_context(self):
         """View-функция редактирования поста передает правильный контекст."""
@@ -299,7 +261,7 @@ class PostPagesTest(TestCase):
             cached_response3.content,
         )
 
-# Проверка работоcпособности подписки/отписки
+    # Проверка работоcпособности подписки/отписки
     def test_follow(self):
         """При подписке создается соответствующая запись в БД."""
         self.authorized_client1.get(reverse(
@@ -350,8 +312,8 @@ class PostPagesTest(TestCase):
         self.assertNotIn(kat_post, follow_index_page_view2)
 
 
-class PaginatorViewsTest(TestCase): 
-    """Тестирование страниц на корректную работу паджинатора.""" 
+class PaginatorViewsTest(TestCase):
+    """Тестирование страниц на корректную работу паджинатора."""
 
     @classmethod
     def setUpClass(cls):

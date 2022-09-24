@@ -6,8 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-
-from posts.models import Group, Post
+from posts.models import Comment, Group, Post
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 NEW_POST_TEXT = 'Новое сообщение!!!'
@@ -111,3 +110,17 @@ class PostFormTests(TestCase):
         self.assertEqual(edit_post.text, form_new_data['text'])
         self.assertEqual(edit_post.author, form_new_data['author'])
         self.assertEqual(edit_post.group.id, form_new_data['group'])
+
+    def test_comment_added(self):
+        """После успешной отправки комментарий появляется на странице поста."""
+        comments_count = Comment.objects.count()
+
+        form_data = {'text': 'Другой комментарий'}
+        self.authorized_client.post(
+            reverse('posts:add_comment', kwargs={'post_id': self.test_post.id}),
+            # print('!!!{self.test_post.id}!!!!')
+            data=form_data,
+            follow=True,
+        )
+        self.assertEqual(Comment.objects.count(), comments_count + 1)
+        self.assertTrue(Comment.objects.filter(text='Другой комментарий'))
