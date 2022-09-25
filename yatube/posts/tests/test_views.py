@@ -10,7 +10,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.models import Follow, Group, Post
+from posts.models import Comment, Follow, Group, Post
 from yatube.settings import POSTS_COUNT, POSTS_TEST_COUNT
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -51,7 +51,7 @@ class PostPagesTest(TestCase):
 
     def setUp(self):
         """ Создание неавторизованного клиента и
-        клиента с авторизованным пользователем."""
+        клиента с авторизованным пользователем. Очистка кэша."""
         self.guest_client = Client()
 
         user1 = get_user_model()
@@ -63,6 +63,16 @@ class PostPagesTest(TestCase):
         self.user2 = user2.objects.create(username='TestUser2')
         self.authorized_client2 = Client()
         self.authorized_client2.force_login(self.user2)
+
+        self.follow2 = self.authorized_client2.get(reverse(
+            'posts:profile_follow',
+            kwargs={'username': self.user1},
+        ))
+        self.test_comment = Comment.objects.create(
+            post=self.test_post,
+            author=self.user2,
+            text='Тест комментарий',
+        )
 
         cache.clear()
 
@@ -107,7 +117,18 @@ class PostPagesTest(TestCase):
             kwargs={'slug': self.ok_group.slug},
         ))
         test_group_field = response.context.get('group')
+        test_posts_field = response.context.get('posts')[0]
+        test_page_obj_field = response.context.get('page_obj')[0]
+        test_group_title = response.context.get('group').title
+        test_group_slug = response.context.get('group').slug
+        test_group_description = response.context.get('group').description
+
         self.assertEqual(test_group_field, self.ok_group)
+        self.assertEqual(test_posts_field, self.test_post)
+        self.assertEqual(test_page_obj_field, self.test_post)
+        self.assertEqual(test_group_title, self.ok_group.title)
+        self.assertEqual(test_group_slug, self.ok_group.slug)
+        self.assertEqual(test_group_description, self.ok_group.description)
 
     def test_post_create_page_show_correct_context(self):
         """View-функция страницы post_create передает правильный контекст."""
@@ -121,7 +142,9 @@ class PostPagesTest(TestCase):
                 form_field = (
                     response.context.get('form').fields.get(field_name)
                 )
+                is_edit = response.context.get('is_edit')
                 self.assertIsInstance(form_field, field_format)
+                self.assertEqual(is_edit, False)
 
     def test_profile_page_show_correct_context(self):
         """View-функция страницы профайла передает правильный контекст."""
@@ -129,8 +152,15 @@ class PostPagesTest(TestCase):
             'posts:profile',
             kwargs={'username': self.test_post.author},
         ))
-        test_profile_field = response.context.get('page_obj')[0]
-        self.assertEqual(test_profile_field, self.test_post)
+        test_profile_page_obj = response.context.get('page_obj')[0]
+        test_profile_author = response.context.get('author')
+        test_profile_post = response.context.get('post')[0]
+        test_profile_following = response.context.get('following')[0]
+
+        self.assertEqual(test_profile_page_obj, self.test_post)
+        self.assertEqual(test_profile_author, self.test_post.author)
+        self.assertEqual(test_profile_post, self.test_post)
+        self.assertEqual(test_profile_following.author, self.user1)
 
     def test_post_detail_show_correct_context(self):
         """View-функция страницы поста передает правильный контекст."""
@@ -138,8 +168,22 @@ class PostPagesTest(TestCase):
             'posts:post_detail',
             kwargs={'post_id': self.test_post.id},
         ))
-        post_detail_field = response.context.get('post')
-        self.assertEqual(post_detail_field, self.test_post)
+        post_detail_post = response.context.get('post')
+        post_detail_count_posts = response.context.get('count_posts')
+        post_detail_user = response.context.get('user')
+        post_detail_comments = response.context.get('comments')[0]
+        author_posts = self.user1.posts.count()
+        correct_comment = Comment.objects.filter(text='Тест комментарий')[0]
+
+        self.assertEqual(post_detail_post, self.test_post)
+        self.assertEqual(post_detail_count_posts, author_posts)
+        self.assertEqual(post_detail_user, self.user2)
+        self.assertTrue(correct_comment)
+        self.assertEqual(post_detail_comments, correct_comment)
+
+        form_dict = {'text': forms.fields.CharField}
+        form_field = (response.context.get('form').fields.get('text'))
+        self.assertIsInstance(form_field, form_dict['text'])
 
     def test_post_edit_page_show_correct_context(self):
         """View-функция редактирования поста передает правильный контекст."""
@@ -149,6 +193,8 @@ class PostPagesTest(TestCase):
                 kwargs={'post_id': self.test_post.id},
             ),
         )
+        post_edit_post = response.context.get('post')
+        self.assertEqual(post_edit_post, self.test_post)
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -158,7 +204,9 @@ class PostPagesTest(TestCase):
                 form_field = (
                     response.context.get('form').fields.get(field_name)
                 )
+                is_edit = response.context.get('is_edit')
                 self.assertIsInstance(form_field, field_format)
+                self.assertEqual(is_edit, True)
 
     def test_post_image_exists_in_context(self):
         """При выводе поста картинка передается в словаре context."""

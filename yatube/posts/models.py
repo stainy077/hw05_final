@@ -1,12 +1,12 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
-
-from yatube.settings import FIRST_CHARACTERS
 
 User = get_user_model()
 
 
 class Group(models.Model):
+    """Модель, описывающая группы."""
     title = models.CharField(
         max_length=200,
         verbose_name='Название группы',
@@ -23,6 +23,7 @@ class Group(models.Model):
 
 
 class Post(models.Model):
+    """Модель, описывающая посты."""
     text = models.TextField(
         verbose_name='Текст сообщения',
     )
@@ -56,10 +57,11 @@ class Post(models.Model):
         verbose_name_plural = 'Посты'
 
     def __str__(self):
-        return self.text[:FIRST_CHARACTERS]
+        return self.text[:settings.FIRST_CHARACTERS]
 
 
 class Comment(models.Model):
+    """Модель, описывающая комментарии."""
     post = models.ForeignKey(
         Post,
         on_delete=models.CASCADE,
@@ -84,10 +86,11 @@ class Comment(models.Model):
         ordering = ['-created']
 
     def __str__(self):
-        return self.text[:FIRST_CHARACTERS]
+        return self.text[:settings.FIRST_CHARACTERS]
 
 
 class Follow(models.Model):
+    """Модель, описывающая подписчиков."""
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -109,6 +112,3 @@ class Follow(models.Model):
             )
         ]
         ordering = ['-author']
-
-    def __str__(self):
-        return self.author[:FIRST_CHARACTERS]

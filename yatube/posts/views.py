@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.cache import cache_page
 
 from posts.forms import CommentForm, PostForm
 from posts.models import Follow, Group, Post
@@ -11,7 +10,6 @@ CACHE_TIME = 20
 User = get_user_model()
 
 
-@cache_page(CACHE_TIME)
 def index(request):
     """Функция отображения главной страницы."""
     posts = Post.objects.select_related('author').all()
@@ -122,6 +120,7 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
+    """Функция страницы с постами авторов, на которых подписан пользователь."""
     posts = Post.objects.filter(author__following__user=request.user)
     followers_cnt = request.user.follower.all().count()
     context = {
@@ -133,6 +132,7 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
+    """Функция подписки на автора."""
     author = get_object_or_404(User, username=username)
     if author != request.user:
         Follow.objects.get_or_create(user=request.user, author=author)
@@ -141,6 +141,7 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
+    """Функция отписки на автора."""
     author = get_object_or_404(User, username=username)
     Follow.objects.filter(user=request.user, author=author).delete()
     return redirect('posts:profile', username=username)
